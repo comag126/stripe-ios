@@ -70,9 +70,9 @@ class PaymentSheetViewController: UIViewController {
     // MARK: - Views
 
     private lazy var addPaymentMethodViewController: AddPaymentMethodViewController = {
+        let viewModel = AddPaymentMethodViewModel(intent: intent, configuration: configuration)
         return AddPaymentMethodViewController(
-            intent: intent,
-            configuration: configuration,
+            viewModel: viewModel,
             delegate: self
         )
     }()
@@ -310,7 +310,7 @@ class PaymentSheetViewController: UIViewController {
 
         // Content header
         walletHeader.isHidden = !shouldShowWalletHeader
-        walletHeader.showsCardPaymentMessage = (addPaymentMethodViewController.paymentMethodTypes == [.card])
+        walletHeader.showsCardPaymentMessage = (addPaymentMethodViewController.viewModel.paymentMethodTypeSelectorViewModel.paymentMethodTypes == [.card])
 
         switch mode {
         case .addingNew:
@@ -372,7 +372,7 @@ class PaymentSheetViewController: UIViewController {
                 buyButtonStatus = addPaymentMethodViewController.overrideCallToActionShouldEnable ? .enabled : .disabled
             } else {
                 buyButtonStatus =
-                    addPaymentMethodViewController.paymentOption == nil ? .disabled : .enabled
+                    addPaymentMethodViewController.viewModel.paymentOption == nil ? .disabled : .enabled
             }
         }
 
@@ -421,7 +421,7 @@ class PaymentSheetViewController: UIViewController {
             if let buyButtonOverrideBehavior = addPaymentMethodViewController.overrideBuyButtonBehavior {
                 addPaymentMethodViewController.didTapCallToActionButton(behavior: buyButtonOverrideBehavior, from: self)
             } else {
-                guard let newPaymentOption = addPaymentMethodViewController.paymentOption else {
+                guard let newPaymentOption = addPaymentMethodViewController.viewModel.paymentOption else {
                     assertionFailure()
                     return
                 }

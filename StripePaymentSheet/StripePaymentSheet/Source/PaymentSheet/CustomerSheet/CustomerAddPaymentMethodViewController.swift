@@ -23,7 +23,7 @@ class CustomerAddPaymentMethodViewController: UIViewController {
     weak var delegate: CustomerAddPaymentMethodViewControllerDelegate?
 
     var selectedPaymentMethodType: PaymentSheet.PaymentMethodType {
-        return paymentMethodTypesView.selected
+        return paymentMethodTypesView.viewModel.selected
     }
     var paymentOption: PaymentOption? {
         let params = IntentConfirmParams(type: selectedPaymentMethodType)
@@ -96,8 +96,8 @@ class CustomerAddPaymentMethodViewController: UIViewController {
         return paymentMethodFormElement.view
     }()
     private lazy var paymentMethodTypesView: PaymentMethodTypeCollectionView = {
-        let view = PaymentMethodTypeCollectionView(
-            paymentMethodTypes: paymentMethodTypes, appearance: configuration.appearance, delegate: self)
+        let viewModel = PaymentMethodTypeSelectorViewModel(paymentMethodTypes: paymentMethodTypes)
+        let view = PaymentMethodTypeCollectionView(viewModel: viewModel, appearance: configuration.appearance)
         return view
     }()
     private lazy var paymentMethodDetailsContainerView: DynamicHeightContainerView = {
@@ -294,13 +294,6 @@ extension CustomerAddPaymentMethodViewController: ElementDelegate {
     func didUpdate(element: Element) {
         delegate?.didUpdate(self)
         animateHeightChange()
-    }
-}
-
-extension CustomerAddPaymentMethodViewController: PaymentMethodTypeCollectionViewDelegate {
-    func didUpdateSelection(_ paymentMethodTypeCollectionView: PaymentMethodTypeCollectionView) {
-        updateFormElement()
-        delegate?.didUpdate(self)
     }
 }
 

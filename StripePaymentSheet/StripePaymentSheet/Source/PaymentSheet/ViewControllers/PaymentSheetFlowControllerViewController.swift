@@ -32,7 +32,7 @@ class PaymentSheetFlowControllerViewController: UIViewController {
     var selectedPaymentOption: PaymentOption? {
         switch mode {
         case .addingNew:
-            if let paymentOption = addPaymentMethodViewController.paymentOption {
+            if let paymentOption = addPaymentMethodViewController.viewModel.paymentOption {
                 return paymentOption
             } else if isApplePayEnabled {
                 return .applePay
@@ -56,7 +56,7 @@ class PaymentSheetFlowControllerViewController: UIViewController {
                 return .dynamic("")
             }
         case .addingNew:
-            return addPaymentMethodViewController.selectedPaymentMethodType
+            return addPaymentMethodViewController.viewModel.paymentMethodTypeSelectorViewModel.selected
         }
     }
     weak var delegate: PaymentSheetFlowControllerViewControllerDelegate?
@@ -161,11 +161,8 @@ class PaymentSheetFlowControllerViewController: UIViewController {
             ),
             appearance: configuration.appearance
         )
-        self.addPaymentMethodViewController = AddPaymentMethodViewController(
-            intent: intent,
-            configuration: configuration,
-            previousCustomerInput: previousNewPaymentMethodParams // Restore the customer's previous new payment method input
-        )
+        let viewModel = AddPaymentMethodViewModel(intent: intent, configuration: configuration, previousCustomerInput: previousNewPaymentMethodParams)
+        self.addPaymentMethodViewController = AddPaymentMethodViewController(viewModel: viewModel)
         super.init(nibName: nil, bundle: nil)
         self.savedPaymentOptionsViewController.delegate = self
         self.addPaymentMethodViewController.delegate = self
@@ -276,7 +273,7 @@ class PaymentSheetFlowControllerViewController: UIViewController {
                 "Select your payment method",
                 "Title shown above a carousel containing the customer's payment methods")
         case .addingNew:
-            if addPaymentMethodViewController.paymentMethodTypes == [.card] {
+            if addPaymentMethodViewController.viewModel.paymentMethodTypeSelectorViewModel.paymentMethodTypes == [.card] {
                 headerLabel.text = STPLocalizedString("Add a card", "Title shown above a card entry form")
             } else {
                 headerLabel.text = STPLocalizedString("Choose a payment method", "TODO")
@@ -356,7 +353,7 @@ class PaymentSheetFlowControllerViewController: UIViewController {
                 if isSavingInProgress || isVerificationInProgress {
                     // We're in the middle of adding the PM
                     return .processing
-                } else if addPaymentMethodViewController.paymentOption == nil {
+                } else if addPaymentMethodViewController.viewModel.paymentOption == nil {
                     // We don't have valid payment method params yet
                     return .disabled
                 } else {
