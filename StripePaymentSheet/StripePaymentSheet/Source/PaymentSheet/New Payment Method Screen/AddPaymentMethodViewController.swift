@@ -167,7 +167,7 @@ class AddPaymentMethodViewController: UIViewController {
     func bindViewModel() {
         viewModel.$paymentMethodFormElement
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] formElement in
+            .sink { [weak self] _ in
                 guard let self = self else { return }
 
                 self.updateUI()
@@ -178,7 +178,7 @@ class AddPaymentMethodViewController: UIViewController {
 
         viewModel.$paymentOption
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] paymentOption in
+            .sink { [weak self] _ in
                 guard let self = self else { return }
 
                 self.delegate?.didUpdate(self)
@@ -314,7 +314,7 @@ class AddPaymentMethodViewController: UIViewController {
 
 // MARK: - ElementDelegate
 
-//extension AddPaymentMethodViewController: ElementDelegate {
+// extension AddPaymentMethodViewController: ElementDelegate {
 //    func continueToNextField(element: Element) {
 //        delegate?.didUpdate(self)
 //    }
@@ -323,10 +323,10 @@ class AddPaymentMethodViewController: UIViewController {
 //        delegate?.didUpdate(self)
 //        animateHeightChange()
 //    }
-//}
+// }
 //
-//extension AddPaymentMethodViewController: PresentingViewControllerDelegate {
+// extension AddPaymentMethodViewController: PresentingViewControllerDelegate {
 //    func presentViewController(viewController: UIViewController, completion: (() -> Void)?) {
 //        self.present(viewController, animated: true, completion: completion)
 //    }
-//}
+// }
