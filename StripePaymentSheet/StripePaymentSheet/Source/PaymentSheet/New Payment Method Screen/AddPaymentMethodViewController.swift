@@ -168,17 +168,21 @@ class AddPaymentMethodViewController: UIViewController {
         viewModel.$paymentMethodFormElement
             .receive(on: DispatchQueue.main)
             .sink { [weak self] formElement in
-                guard
-                    let self = self,
-                    let formElement = formElement
-                else {
-                    return
-                }
+                guard let self = self else { return }
 
-                formElement.delegate = self
                 self.updateUI()
                 self.delegate?.didUpdate(self)
                 sendEventToSubviews(.viewDidAppear, from: self.view)
+            }
+            .store(in: &subscriptions)
+
+        viewModel.$paymentOption
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] paymentOption in
+                guard let self = self else { return }
+
+                self.delegate?.didUpdate(self)
+                self.animateHeightChange()
             }
             .store(in: &subscriptions)
     }
@@ -310,19 +314,19 @@ class AddPaymentMethodViewController: UIViewController {
 
 // MARK: - ElementDelegate
 
-extension AddPaymentMethodViewController: ElementDelegate {
-    func continueToNextField(element: Element) {
-        delegate?.didUpdate(self)
-    }
-
-    func didUpdate(element: Element) {
-        delegate?.didUpdate(self)
-        animateHeightChange()
-    }
-}
-
-extension AddPaymentMethodViewController: PresentingViewControllerDelegate {
-    func presentViewController(viewController: UIViewController, completion: (() -> Void)?) {
-        self.present(viewController, animated: true, completion: completion)
-    }
-}
+//extension AddPaymentMethodViewController: ElementDelegate {
+//    func continueToNextField(element: Element) {
+//        delegate?.didUpdate(self)
+//    }
+//
+//    func didUpdate(element: Element) {
+//        delegate?.didUpdate(self)
+//        animateHeightChange()
+//    }
+//}
+//
+//extension AddPaymentMethodViewController: PresentingViewControllerDelegate {
+//    func presentViewController(viewController: UIViewController, completion: (() -> Void)?) {
+//        self.present(viewController, animated: true, completion: completion)
+//    }
+//}

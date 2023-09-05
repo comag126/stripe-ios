@@ -18,6 +18,7 @@ class AddPaymentMethodViewModel: ObservableObject {
     @Published var linkAccount: PaymentSheetLinkAccount? = LinkAccountContext.shared.account
     @Published var paymentMethodFormElement: PaymentMethodElement!
     @Published var usBankAccountFormElement: USBankAccountPaymentMethodElement?
+    @Published var paymentOption: PaymentOption?
 
     private var subscriptions = Set<AnyCancellable>()
 
@@ -75,6 +76,8 @@ class AddPaymentMethodViewModel: ObservableObject {
 
         LinkAccountContext.shared.addObserver(self, selector: #selector(linkAccountChanged(_:)))
 
+        updatePaymentOption()
+
         bind()
     }
 
@@ -93,6 +96,7 @@ class AddPaymentMethodViewModel: ObservableObject {
                 } else {
                     self.paymentMethodFormElement = self.makeElement(for: selectedPaymentMethodType)
                 }
+                self.updatePaymentOption()
             }
             .store(in: &subscriptions)
 
@@ -118,6 +122,7 @@ class AddPaymentMethodViewModel: ObservableObject {
             offerSaveToLinkWhenSupported: shouldOfferLinkSignup,
             linkAccount: linkAccount
         ).make()
+        formElement.delegate = self
         return formElement
     }
 
@@ -126,5 +131,30 @@ class AddPaymentMethodViewModel: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.linkAccount = notification.object as? PaymentSheetLinkAccount
         }
+    }
+
+    private func updatePaymentOption() {
+        paymentOption = {
+            if let linkEnabledElement = paymentMethodFormElement as? LinkEnabledPaymentMethodElement {
+                return linkEnabledElement.makePaymentOption()
+            }
+
+            var params = IntentConfirmParams(type: paymentMethodTypeSelectorViewModel.selected)
+            params = paymentMethodFormElement.applyDefaults(params: params)
+            if let params = paymentMethodFormElement.updateParams(params: params) {
+                return .new(confirmParams: params)
+            }
+            return nil
+        }()
+    }
+}
+
+extension AddPaymentMethodViewModel: ElementDelegate {
+    func continueToNextField(element: Element) {
+        updatePaymentOption()
+    }
+
+    func didUpdate(element: Element) {
+        updatePaymentOption()
     }
 }
