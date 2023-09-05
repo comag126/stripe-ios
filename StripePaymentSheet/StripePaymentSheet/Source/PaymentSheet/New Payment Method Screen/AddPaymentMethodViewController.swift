@@ -134,12 +134,6 @@ class AddPaymentMethodViewController: UIViewController {
             paymentMethodTypesView.isHidden = false
         }
         updateUI()
-
-        LinkAccountContext.shared.addObserver(self, selector: #selector(linkAccountChanged(_:)))
-    }
-
-    deinit {
-        LinkAccountContext.shared.removeObserver(self)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -193,13 +187,6 @@ class AddPaymentMethodViewController: UIViewController {
     func setErrorIfNecessary(for error: Error?) -> Bool {
         // TODO
         return false
-    }
-
-    @objc
-    func linkAccountChanged(_ notification: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            self?.viewModel.linkAccount = notification.object as? PaymentSheetLinkAccount
-        }
     }
 
     // MARK: - Private

@@ -70,7 +70,7 @@ class PaymentSheetViewController: UIViewController {
     // MARK: - Views
 
     private lazy var addPaymentMethodViewController: AddPaymentMethodViewController = {
-        let viewModel = AddPaymentMethodViewModel(intent: intent, configuration: configuration)
+        let viewModel = AddPaymentMethodViewModel(intent: intent, configuration: configuration, isLinkEnabled: isLinkEnabled)
         return AddPaymentMethodViewController(
             viewModel: viewModel,
             delegate: self

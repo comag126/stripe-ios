@@ -12,13 +12,14 @@ import Foundation
 class AddPaymentMethodViewModel: ObservableObject {
     let intent: Intent
     let configuration: PaymentSheet.Configuration
+    let isLinkEnabled: Bool
 
     @Published var paymentMethodTypeSelectorViewModel: PaymentMethodTypeSelectorViewModel
     @Published var linkAccount: PaymentSheetLinkAccount? = LinkAccountContext.shared.account
-    @Published var overrideBuyButtonBehavior: OverrideableBuyButtonBehavior?
-    @Published var overrideCallToAction: ConfirmButton.CallToActionType?
     @Published var paymentMethodFormElement: PaymentMethodElement!
     @Published var usBankAccountFormElement: USBankAccountPaymentMethodElement?
+
+    private var subscriptions = Set<AnyCancellable>()
 
     var paymentOption: PaymentOption? {
         if let linkEnabledElement = paymentMethodFormElement as? LinkEnabledPaymentMethodElement {
@@ -37,15 +38,20 @@ class AddPaymentMethodViewModel: ObservableObject {
         return nil
     }
 
-    private var subscriptions = Set<AnyCancellable>()
+    var shouldOfferLinkSignup: Bool {
+        guard isLinkEnabled else { return false }
+        return LinkAccountContext.shared.account.flatMap({ !$0.isRegistered }) ?? true
+    }
 
     init(
         intent: Intent,
         configuration: PaymentSheet.Configuration,
-        previousCustomerInput: IntentConfirmParams? = nil
+        previousCustomerInput: IntentConfirmParams? = nil,
+        isLinkEnabled: Bool = false
     ) {
         self.intent = intent
         self.configuration = configuration
+        self.isLinkEnabled = isLinkEnabled
         let paymentMethodTypes = PaymentSheet.PaymentMethodType.filteredPaymentMethodTypes(
             from: intent,
             configuration: configuration,
@@ -67,7 +73,13 @@ class AddPaymentMethodViewModel: ObservableObject {
             previousCustomerInput: previousCustomerInput
         ) as? USBankAccountPaymentMethodElement
 
+        LinkAccountContext.shared.addObserver(self, selector: #selector(linkAccountChanged(_:)))
+
         bind()
+    }
+
+    deinit {
+        LinkAccountContext.shared.removeObserver(self)
     }
 
     private func bind() {
@@ -98,16 +110,21 @@ class AddPaymentMethodViewModel: ObservableObject {
         for type: PaymentSheet.PaymentMethodType,
         previousCustomerInput: IntentConfirmParams? = nil
     ) -> PaymentMethodElement {
-        let offerSaveToLinkWhenSupported = true// delegate?.shouldOfferLinkSignup(self) ?? false
-
         let formElement = PaymentSheetFormFactory(
             intent: intent,
             configuration: .paymentSheet(configuration),
             paymentMethod: type,
             previousCustomerInput: previousCustomerInput,
-            offerSaveToLinkWhenSupported: offerSaveToLinkWhenSupported,
+            offerSaveToLinkWhenSupported: shouldOfferLinkSignup,
             linkAccount: linkAccount
         ).make()
         return formElement
+    }
+
+    @objc
+    func linkAccountChanged(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            self?.linkAccount = notification.object as? PaymentSheetLinkAccount
+        }
     }
 }
