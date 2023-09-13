@@ -11,9 +11,14 @@ import UIKit
 
 protocol NativeFlowControllerDelegate: AnyObject {
 
-    func authFlow(
-        controller: NativeFlowController,
+    func nativeFlowController(
+        _ nativeFlowController: NativeFlowController,
         didFinish result: FinancialConnectionsSheet.Result
+    )
+
+    func nativeFlowController(
+        _ nativeFlowController: NativeFlowController,
+        didReceiveEvent event: FinancialConnectionsEvent
     )
 }
 
@@ -256,7 +261,7 @@ extension NativeFlowController {
     // 2. User closes, no accounts are returned, and there's an error. That's a failure.
     // 3. User closes, no accounts are returned, and there's no error. That's a cancel.
     // 4. User closes, and fetching accounts returns an error. That's a failure.
-        private func closeAuthFlow(
+    private func closeAuthFlow(
         showConfirmationAlert: Bool,
         showNetworkingLanguageInConfirmationAlert: Bool = false,
         customManualEntry: Bool = false,
@@ -264,7 +269,7 @@ extension NativeFlowController {
     ) {
         let finishAuthSession: (FinancialConnectionsSheet.Result) -> Void = { [weak self] result in
             guard let self = self else { return }
-            self.delegate?.authFlow(controller: self, didFinish: result)
+            self.delegate?.nativeFlowController(self, didFinish: result)
         }
 
         let completeFinancialConnectionsSession = { [weak self] in
@@ -290,6 +295,7 @@ extension NativeFlowController {
                             if !session.accounts.data.isEmpty || session.paymentAccount != nil
                                 || session.bankAccountToken != nil
                             {
+                                // TODO(kgaidis): log "success" evnet with manual entry...
                                 self.logCompleteEvent(
                                     type: eventType,
                                     status: "completed",
@@ -312,6 +318,10 @@ extension NativeFlowController {
                                     )
                                     finishAuthSession(.failed(error: terminalError))
                                 } else {
+                                    self.delegate?.nativeFlowController(
+                                        self,
+                                        didReceiveEvent: FinancialConnectionsEvent(name: .cancel)
+                                    )
                                     self.logCompleteEvent(
                                         type: eventType,
                                         status: "canceled"
@@ -392,6 +402,11 @@ extension NativeFlowController: ConsentViewControllerDelegate {
         _ viewController: ConsentViewController,
         didConsentWithManifest manifest: FinancialConnectionsSessionManifest
     ) {
+        delegate?.nativeFlowController(
+            self,
+            didReceiveEvent: FinancialConnectionsEvent(name: .consentAcquired)
+        )
+
         dataManager.manifest = manifest
 
         pushPane(manifest.nextPane, animated: true)
@@ -410,6 +425,16 @@ extension NativeFlowController: InstitutionPickerViewControllerDelegate {
         _ viewController: InstitutionPickerViewController,
         didSelect institution: FinancialConnectionsInstitution
     ) {
+        delegate?.nativeFlowController(
+            self,
+            didReceiveEvent: FinancialConnectionsEvent(
+                name: .institutionSelected,
+                metadata: FinancialConnectionsEvent.Metadata(
+                    institutionName: institution.name
+                )
+            )
+        )
+
         dataManager.institution = institution
 
         pushPane(.partnerAuth, animated: true)
@@ -419,6 +444,15 @@ extension NativeFlowController: InstitutionPickerViewControllerDelegate {
         _ viewController: InstitutionPickerViewController
     ) {
         pushPane(.manualEntry, animated: true)
+    }
+
+    func institutionPickerViewControllerDidSearch(
+        _ viewController: InstitutionPickerViewController
+    ) {
+        delegate?.nativeFlowController(
+            self,
+            didReceiveEvent: FinancialConnectionsEvent(name: .searchInitiated)
+        )
     }
 }
 
@@ -442,6 +476,11 @@ extension NativeFlowController: PartnerAuthViewControllerDelegate {
         _ viewController: PartnerAuthViewController,
         didCompleteWithAuthSession authSession: FinancialConnectionsAuthSession
     ) {
+        delegate?.nativeFlowController(
+            self,
+            didReceiveEvent: FinancialConnectionsEvent(name: .institutionAuthorized)
+        )
+
         dataManager.authSession = authSession
 
         // This is a weird thing to do, but effectively we don't want to
@@ -465,9 +504,18 @@ extension NativeFlowController: AccountPickerViewControllerDelegate {
 
     func accountPickerViewController(
         _ viewController: AccountPickerViewController,
-        didSelectAccounts selectedAccounts: [FinancialConnectionsPartnerAccount]
+        didSelectAccounts selectedAccounts: [FinancialConnectionsPartnerAccount],
+        bySkippingSelection skippedAccountSelection: Bool
     ) {
         dataManager.linkedAccounts = selectedAccounts
+
+        if !skippedAccountSelection {
+            // user manually selected the accounts
+            delegate?.nativeFlowController(
+                self,
+                didReceiveEvent: FinancialConnectionsEvent(name: .accountsSelected)
+            )
+        }
 
         let shouldAttachLinkedPaymentAccount = (dataManager.manifest.paymentMethodType != nil)
         if shouldAttachLinkedPaymentAccount {
@@ -889,6 +937,11 @@ private func CreatePaneViewController(
         assertionFailure("Not supported")
         viewController = nil
     case .manualEntry:
+        nativeFlowController.delegate?.nativeFlowController(
+            nativeFlowController,
+            didReceiveEvent: FinancialConnectionsEvent(name: .manualEntryInitiated)
+        )
+
         let dataSource = ManualEntryDataSourceImplementation(
             apiClient: dataManager.apiClient,
             clientSecret: dataManager.clientSecret,
